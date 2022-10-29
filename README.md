@@ -18,6 +18,15 @@ https://www.data.go.kr/data/15012690/openapi.do
 - 20221004+점심+4_000
 - 20221004+점심+4_000+[인원2명]
 
+# 실행 코드
+
+```
+python main_v2.py
+```
+
+# 실행 화면
+
+[화면](./output.PNG)
 
 # 최신 코드
 main_v2.py
