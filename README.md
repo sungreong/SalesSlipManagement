@@ -26,7 +26,7 @@ python main_v2.py
 
 # 실행 화면
 
-[화면](./output.PNG)
+![화면](./output.PNG)
 
 # 최신 코드
 main_v2.py
