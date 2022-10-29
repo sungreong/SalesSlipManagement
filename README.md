@@ -17,9 +17,12 @@ https://www.data.go.kr/data/15012690/openapi.do
 
 위의 링크를 통해 API 키가 있어야지, 휴일을 확인할 수 있음.
 
-# 이미지 형식
+# 이미지 형식 
+
+- 현재는 PNG만 됩니다. 추후 개선...
 
 `[날짜]+[타입]+[금액]+[특이사항].PNG`
+
 `yyyymmdd+[tag_name]+[금액]+[특이사항].PNG`
 
 
@@ -61,4 +64,4 @@ pyinstaller --noconsole --onefile --icon=agilesoda.ico main_v2.py
 
 - [ ] 기존에 다른 분께서 만든 코드 결과물 포맷 반영 [로건 자동 월망 청구 코드 링크](https://github.com/hotorch/acc_contents_selenium)
 - [ ] 맥에서 실행할 수 있는 파일 만들기
-
+- [ ] 다양한 이미지 파일 수용(JPG,JPEG, ...)
