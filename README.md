@@ -31,11 +31,22 @@ python main_v2.py
 # 최신 코드
 main_v2.py
 
+# 패키지
+
+- 아래와 같은 코드를 이용하면 대부분 패키지는 해결될 것으로 예상
+
+```
+pip install pipreqs
+pipreqs ./
+pip install -r requirements.txt
+```
+
 # EXE 파일 만들기
 pyinstaller --noconsole --onefile --icon=agilesoda.ico main.py
 pyinstaller --noconsole --onefile --icon=agilesoda.ico main_v2.py
 
 # NEXT
 
-- [ ] 기존에 다른 분께서 만든 코드 결과물 포맷 반영 
+- [ ] 기존에 다른 분께서 만든 코드 결과물 포맷 반영 [로건 자동 월망 청구 코드 링크](https://github.com/hotorch/acc_contents_selenium)
 - [ ] 맥에서 실행할 수 있는 파일 만들기
+
