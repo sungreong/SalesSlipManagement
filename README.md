@@ -12,7 +12,10 @@ https://www.data.go.kr/data/15012690/openapi.do
 
 # 이미지 형식
 
+`[날짜]+[타입]+[금액]+[특이사항].PNG`
 `yyyymmdd+[tag_name]+[금액]+[특이사항].PNG`
+
+
 
 ## 예시
 
