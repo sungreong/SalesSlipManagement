@@ -28,5 +28,5 @@ pyinstaller --noconsole --onefile --icon=agilesoda.ico main_v2.py
 
 # NEXT
 
-- [] 기존에 다른 분께서 만든 코드 결과물 포맷 반영 
-- [] 맥에서 실행할 수 있는 파일 만들기
+- [ ] 기존에 다른 분께서 만든 코드 결과물 포맷 반영 
+- [ ] 맥에서 실행할 수 있는 파일 만들기
