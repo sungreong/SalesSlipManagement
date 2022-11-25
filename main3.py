@@ -22,7 +22,7 @@ if root_dir not in sys.path:
     sys.path.append(root_dir)
 
 import csv
-from datetime import datetime
+
 
 import calendar
 import numpy as np
@@ -73,6 +73,7 @@ def check_holiday(result_table, api_key):
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from datetime import datetime
 
 
 def get_sales_check_of_credit_card(path, year, month, api_key):
@@ -80,7 +81,9 @@ def get_sales_check_of_credit_card(path, year, month, api_key):
     folder = Path(path)
     result = []
     img_format = "*[PNG$|jpg$|png$]"
-
+    print(folder.glob(img_format))
+    print(list(folder.glob(img_format)))
+    assert len(list(folder.glob(img_format))) != 0, "파일 인식 문제 발생"
     max_col = 0
     for i in list(folder.glob(img_format)):
         result.append([i.replace("_", "") for i in i.parts[-1].split(".")[0].split("+")])
@@ -101,7 +104,12 @@ def get_sales_check_of_credit_card(path, year, month, api_key):
 
     dayofweek_day = np.array(list(itertools.repeat(list("월화수목금"), dayofweek.shape[0])))[check_bool].ravel()
     dayofweek = dayofweek[check_bool].ravel()
-    total_date = pd.DataFrame(dict(day=[date(year, month, i) for i in dayofweek], dayofweek=dayofweek_day))
+    try:
+        total_date = pd.DataFrame(dict(day=[date(year, month, i) for i in dayofweek], dayofweek=dayofweek_day))
+    except Exception as e:
+        print(result.to_markdown())
+        print(dayofweek)
+        raise Exception(e)
     total_date["day"] = pd.to_datetime(total_date["day"])
 
     result2 = result.groupby(["날짜", "태그"], as_index=False).apply(
@@ -132,9 +140,11 @@ class MyApp(QMainWindow):
         wid1 = QWidget(self)
         self.setCentralWidget(wid1)
         self.month_options = [str(i) for i in list(range(1, 13))]
-        self.year_options = [str(i) for i in list(range(2022, 2028))]
+        self.year_options = [str(i) for i in list(range(2022, 2027))]
+
         currentYear = str(datetime.now().year)
         currentMonth = str(datetime.now().month)
+
         self.combo_year = QComboBox()
         self.combo_year.addItems(self.year_options)
         self.combo_year.setCurrentIndex(self.year_options.index(currentYear))
@@ -185,12 +195,17 @@ class MyApp(QMainWindow):
         self.textBrowser.setFixedHeight(50)
         self.textBrowser.append("API KEY를 발급 받아 아래 텍스트 박스에 넣어주세요.")
         self.textBrowser.append("<a href=https://www.data.go.kr/data/15012690/openapi.do>한국천문연구원_특일 정보</a>")
+
         mytext.addRow(QLabel("참고  "), self.textBrowser)
         # layout.addWidget(self.textBrowser)
         self.text_edit = QTextEdit(self)
         self.text_edit.setStyleSheet("font-size: 15px;")
         self.text_edit.setFixedHeight(50)
-        self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요")
+        if Path("./apikey.json").is_file():
+            f = open("./apikey.json")
+            self.text_edit.setPlainText(str(json.load(f)["key"]))
+        else:
+            self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요")
         mytext.addRow(QLabel("API KEY  "), self.text_edit)
         # layout.addWidget(self.text_edit)
 
@@ -227,7 +242,6 @@ class MyApp(QMainWindow):
 
     def launchDialog(self):
         option = self.options.index(self.combo.currentText())
-
         if option == 0:
             response = self.getDirectory()
         elif option == 1:
@@ -236,49 +250,68 @@ class MyApp(QMainWindow):
             print("Got Nothing")
 
     def get_table(self):
-        api_key = self.text_edit.toPlainText()
-        if self._dir_name == "":
-            self.textBrowser_msg.append("Warnings....")
-            self.textBrowser_msg.append("폴더 경로를 정하지 않았습니다.")
-            self.textBrowser_msg.append("매출전표가 있는 폴더 경로부터 지정해주세요.")
-        if api_key == "":
-            self.textBrowser_msg.append("Warnings....")
-            self.textBrowser_msg.append("API KEY를 입력하지 않았습니다")
-            self.textBrowser_msg.append("API KEY를 입력해주세요")
-        month = int(self.combo_month.currentText())
-        year = int(self.combo_year.currentText())
-        result = get_sales_check_of_credit_card(self._dir_name, year, month, api_key)
+        try:
+            api_key = self.text_edit.toPlainText()
+            print("API KEY : ", api_key)
+            if self._dir_name == "":
+                self.textBrowser_msg.append("Warnings....")
+                self.textBrowser_msg.append("폴더 경로를 정하지 않았습니다.")
+                self.textBrowser_msg.append("매출전표가 있는 폴더 경로부터 지정해주세요.")
+            if api_key == "":
+                self.textBrowser_msg.append("Warnings....")
+                self.textBrowser_msg.append("API KEY를 입력하지 않았습니다")
+                self.textBrowser_msg.append("API KEY를 입력해주세요")
+            month = int(self.combo_month.currentText())
+            year = int(self.combo_year.currentText())
+            result = get_sales_check_of_credit_card(self._dir_name, year, month, api_key)
 
-        event_list = self.event_text_edit.toPlainText().strip().split(";")
+            event_list = self.event_text_edit.toPlainText().strip().split(";")
 
-        for event in event_list:
-            if event == "":
-                continue
-            day, event_name = event.split(",")
-            date_time = pd.to_datetime(f"{year}/{month}/{day}", format="%Y/%m/%d")
-            result.loc[result["day"] == date_time, "특이사항"] = event_name
+            for event in event_list:
+                if event == "":
+                    continue
+                day, event_name = event.split(",")
+                date_time = pd.to_datetime(f"{year}/{month}/{day}", format="%Y/%m/%d")
+                result.loc[result["day"] == date_time, "특이사항"] = event_name
 
-        result_path = f"{self._dir_name}/result.xlsx"
-        writer = pd.ExcelWriter(result_path, engine="xlsxwriter")
+            result_path = f"{self._dir_name}/result.xlsx"
+            writer = pd.ExcelWriter(result_path, engine="xlsxwriter")
 
-        result.to_excel(writer, sheet_name="식대")
+            result.to_excel(writer, sheet_name="식대")
 
-        n_day_of_unique = result["day"].nunique()
-        event = ["휴가", "휴일"]
-        n_day_of_not_event_unique = result.query("특이사항 not in @event")["day"].nunique()
-        lunch_total = result.query("태그 == '점심'")["총합"].sum()
-        lunch_event = pd.DataFrame(
-            [{"총근무일수": n_day_of_unique, "총근무일수(이벤트제외)": n_day_of_not_event_unique, "현재까지 점심 사용 금액": lunch_total}]
-        )
-        lunch_event.to_excel(writer, sheet_name="점심식대")
-        event_total_df = result.groupby(["태그"], as_index=False).sum()
-        event_total_df.to_excel(writer, sheet_name="총태그합")
-        writer.close()
+            n_day_of_unique = result["day"].nunique()
+            event = ["휴가", "휴일"]
+            n_day_of_not_event_unique = result.query("특이사항 not in @event")["day"].nunique()
+            lunch_total = result.query("태그 == '점심'")["총합"].sum()
+            lunch_event = pd.DataFrame(
+                [
+                    {
+                        "총근무일수": n_day_of_unique,
+                        "총근무일수(이벤트제외)": n_day_of_not_event_unique,
+                        "현재까지 점심 사용 금액": lunch_total,
+                        "총사용가능금액(이벤트제외)": n_day_of_not_event_unique * 10_000,
+                        "잔여금액(이벤트제외)": n_day_of_not_event_unique * 10_000 - lunch_total,
+                    }
+                ]
+            )
+            lunch_event.to_excel(writer, sheet_name="점심식대")
+            event_total_df = result.groupby(["태그"], as_index=False).sum()
+            event_total_df.to_excel(writer, sheet_name="총태그합")
+            writer.close()
 
-        self.textBrowser_msg.clear()
-        self.textBrowser_msg.append("결과 테이블 저장 완료...")
-        self.textBrowser_msg.append(f"파일 위치 {result_path}")
-        return 200
+            self.textBrowser_msg.clear()
+            self.textBrowser_msg.append("결과 테이블 저장 완료...")
+            self.textBrowser_msg.append(f"파일 위치 {result_path}")
+            folder_path = str(Path(os.path.abspath(result_path)).parent)
+            self.textBrowser_msg.append(f"해당 파일이 있는 경로를 엽니다. 파일을 확인해주세요")
+            os.startfile(folder_path)
+            return 200
+        except Exception as e:
+            self.textBrowser_msg.clear()
+            self.textBrowser_msg.append("Error... 테이블 생성 에러...")
+            self.textBrowser_msg.append(str(e))
+
+            return 404
 
     def getFileName(self):
         file_filter = "Data File (*.xlsx *.csv *.dat);; Excel File (*.xlsx *.xls)"
@@ -289,7 +322,6 @@ class MyApp(QMainWindow):
             filter=file_filter,
             initialFilter="Excel File (*.xlsx *.xls)",
         )
-        print(response)
         return response[0]
 
     def getFileNames(self):
@@ -308,6 +340,7 @@ class MyApp(QMainWindow):
         self._dir_name = QFileDialog.getExistingDirectory(self, caption="Select a folder")
         response = self._dir_name
         self.textBrowser_dir.append(self._dir_name)
+
         return response
 
     def getSaveFileName(self):
@@ -319,7 +352,6 @@ class MyApp(QMainWindow):
             filter=file_filter,
             initialFilter="Excel File (*.xlsx *.xls)",
         )
-        print(response)
         return response[0]
 
 

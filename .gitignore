@@ -130,3 +130,5 @@ dmypy.json
 
 # 임시
 *.ipynb
+
+apikey.json
