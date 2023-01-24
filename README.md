@@ -75,6 +75,46 @@ pip install -r requirements.txt
 pyinstaller --noconsole --onefile --icon=agilesoda.ico main.py
 pyinstaller --noconsole --onefile --icon=agilesoda.ico main_v2.py
 
+# 실행
+
+```
+python main3.py
+```
+
+# 이미지 파일 형식
+
+(yyyymmdd)+(tag)+(price)+(기타정보).[jpg|png]
+
+1. yyyymmdd
+날짜 적기
+
+2. tag 
+
+- 중식
+- 석식
+- 야근 택시비
+- 문화마일리지
+- 조식
+- 통신비
+- 국내출장 교통비
+- 국내출장 식대
+- 국내출장 숙박
+- 국내출장 주차비
+- 업무영 도서구입
+- 사무용품
+- 전산용품
+
+나머지 항목들은  표준적요의 코드 이름을 참고해야 함.
+
+3. price
+가격 적기
+
+4. 기타정보
+몇 명이 먹었는 지 같은 정보 적기(TODO:)
+
+
+
+
 # ToDo List
 
 - [ ] 기존에 다른 분께서 만든 코드 결과물 포맷 반영 [로건 자동 월망 청구 코드 링크](https://github.com/hotorch/acc_contents_selenium)

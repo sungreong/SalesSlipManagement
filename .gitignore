@@ -132,3 +132,4 @@ dmypy.json
 *.ipynb
 
 apikey.json
+*.ini

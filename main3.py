@@ -20,104 +20,41 @@ from time import sleep
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.append(root_dir)
-
+from utils.utils import make_sales_info, get_sales_check_of_credit_card
 import csv
 
+import configparser
 
-import calendar
-import numpy as np
-import itertools
+config = configparser.ConfigParser()
+
 from datetime import datetime, date
 import json
-from pandas import json_normalize
+
 from pathlib import Path
 import pandas as pd
 
-__all__ = ["get_sales_check_of_credit_card"]
 
-
-def get_holiday(api_key):
-    import requests
-
-    today = datetime.today().strftime("%Y%m%d")
-    today_year = datetime.today().year
-    # key = input("API 키를 입력해주세요 (https://www.data.go.kr/data/15012690/openapi.do)")
-    key = api_key
-    url = (
-        "http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo?_type=json&numOfRows=50&solYear="
-        + str(today_year)
-        + "&ServiceKey="
-        + str(key)
-    )
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        json_ob = json.loads(response.text)
-        holidays_data = json_ob["response"]["body"]["items"]["item"]
-        dataframe = json_normalize(holidays_data)
-    dataframe["locdate"] = pd.to_datetime(dataframe["locdate"], format="%Y%m%d")
-    return dataframe
-
-
-def check_holiday(result_table, api_key):
-
-    holiday_df = get_holiday(api_key)
-
-    check = list(set(result_table["day"]) & set(holiday_df["locdate"]))
-    result_table[result_table.day.isin(check)] = result_table[result_table.day.isin(check)].fillna(
-        dict(태그="-", 총합=0, 특이사항="휴일")
-    )
-    return result_table
+SalesType = [
+    "중식",
+    "석식",
+    "야근 택시비",
+    "문화마일리지",
+    "조식",
+    "통신비",
+    "국내출장 교통비",
+    "국내출장 식대",
+    "국내출장 숙박",
+    "국내출장 주차비",
+    "업무영 도서구입",
+    "사무용품",
+    "전산용품",
+]
 
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from datetime import datetime
-
-
-def get_sales_check_of_credit_card(path, year, month, api_key):
-    path = rf"{path}"
-    folder = Path(path)
-    result = []
-    img_format = "*[PNG$|jpg$|png$]"
-    print(folder.glob(img_format))
-    print(list(folder.glob(img_format)))
-    assert len(list(folder.glob(img_format))) != 0, "파일 인식 문제 발생"
-    max_col = 0
-    for i in list(folder.glob(img_format)):
-        result.append([i.replace("_", "") for i in i.parts[-1].split(".")[0].split("+")])
-        max_col = max([max_col, len(result[-1])])
-    else:
-        if max_col == 3:
-            result = pd.DataFrame(result, columns=["날짜", "태그", "가격"])
-            result["비고"] = "-"
-        elif max_col == 4:
-            result = pd.DataFrame(result, columns=["날짜", "태그", "가격", "비고"])
-        result["날짜"] = pd.to_datetime(result["날짜"])
-        result["가격"] = result["가격"].astype(int)
-        result["비고"] = result["비고"].fillna("-")
-
-    day = calendar.monthcalendar(year, month)
-    dayofweek = np.array(day)[:, :-2]
-    check_bool = np.where(dayofweek != 0, True, False)
-
-    dayofweek_day = np.array(list(itertools.repeat(list("월화수목금"), dayofweek.shape[0])))[check_bool].ravel()
-    dayofweek = dayofweek[check_bool].ravel()
-    try:
-        total_date = pd.DataFrame(dict(day=[date(year, month, i) for i in dayofweek], dayofweek=dayofweek_day))
-    except Exception as e:
-        print(result.to_markdown())
-        print(dayofweek)
-        raise Exception(e)
-    total_date["day"] = pd.to_datetime(total_date["day"])
-
-    result2 = result.groupby(["날짜", "태그"], as_index=False).apply(
-        lambda x: pd.Series(dict(총합=sum(x["가격"]), 특이사항=x["비고"].tolist()))
-    )
-    result_table = pd.merge(total_date, result2, left_on="day", right_on="날짜", how="outer").drop(columns=["날짜"])
-    result_table = check_holiday(result_table, api_key)
-    return result_table
 
 
 class MyApp(QMainWindow):
@@ -219,10 +156,30 @@ class MyApp(QMainWindow):
         # layout.addWidget(btn)
 
         self.textBrowser_msg = QTextBrowser()
-        self.textBrowser_msg.setStyleSheet("font-size: 10px;")
+        self.textBrowser_msg.setStyleSheet("font-size: 15px;")
         self.textBrowser_msg.setFixedHeight(100)
         mytext.addRow(self.textBrowser_msg)
         # layout.addWidget(self.textBrowser_msg)
+
+        # ### USER
+        self.user_id = QTextEdit()
+        self.user_id.setStyleSheet("font-size: 20px;")
+        self.user_id.setFixedHeight(50)
+        self.user_id.setPlaceholderText(r"USER의 ID를 입력하세요")
+        label = QLabel("USER  ")
+        label.setFont(QFont("Arial", 10))
+        mytext.addRow(label, self.user_id)
+        # ### PW
+        self.pw_id = QTextEdit()
+        self.pw_id.setStyleSheet("font-size: 20px;")
+        self.pw_id.setFixedHeight(50)
+        self.pw_id.setPlaceholderText(r"USER의 PW를 입력하세요")
+        label = QLabel("PASSWORD ")
+        label.setFont(QFont("Arial", 10))
+        mytext.addRow(label, self.pw_id)
+        btn2 = QPushButton("제출 실행")
+        btn2.clicked.connect(self.run_acc_selenium)
+        mytext.addRow(btn2)
 
     def handleSavemon(self):
         #        with open('monschedule.csv', 'wb') as stream:
@@ -275,14 +232,20 @@ class MyApp(QMainWindow):
                 result.loc[result["day"] == date_time, "특이사항"] = event_name
 
             result_path = f"{self._dir_name}/result.xlsx"
+            result_path2 = f"{self._dir_name}/sample_data.xlsx"
             writer = pd.ExcelWriter(result_path, engine="xlsxwriter")
+            writer2 = pd.ExcelWriter(result_path2, engine="xlsxwriter")
 
             result.to_excel(writer, sheet_name="식대")
 
+            report_sales_info = make_sales_info(result_table=result)
+            report_sales_info.to_excel(writer2, index=False)
+            writer2.close()
             n_day_of_unique = result["day"].nunique()
             event = ["휴가", "휴일"]
             n_day_of_not_event_unique = result.query("특이사항 not in @event")["day"].nunique()
-            lunch_total = result.query("태그 == '점심'")["총합"].sum()
+            luncu_tag = ["'점심'", "'중식'"]
+            lunch_total = result.query("태그 in @luncu_tag")["총합"].sum()
             lunch_event = pd.DataFrame(
                 [
                     {
@@ -301,7 +264,13 @@ class MyApp(QMainWindow):
 
             self.textBrowser_msg.clear()
             self.textBrowser_msg.append("결과 테이블 저장 완료...")
-            self.textBrowser_msg.append(f"파일 위치 {result_path}")
+
+            self.textBrowser_msg.append(f"폴더 경로 : {Path(result_path).parent}")
+
+            Path(result_path2).name
+            self.textBrowser_msg.append(f"경비 파일 : {Path(result_path).name}")
+            self.textBrowser_msg.append(f"제출 파일 : {Path(result_path2).name}")
+            self.textBrowser_msg.append(f"제출 파일은 확인 및 일부 수정이 필요합니다.")
             folder_path = str(Path(os.path.abspath(result_path)).parent)
             self.textBrowser_msg.append(f"해당 파일이 있는 경로를 엽니다. 파일을 확인해주세요")
             os.startfile(folder_path)
@@ -310,8 +279,26 @@ class MyApp(QMainWindow):
             self.textBrowser_msg.clear()
             self.textBrowser_msg.append("Error... 테이블 생성 에러...")
             self.textBrowser_msg.append(str(e))
-
             return 404
+
+    def run_acc_selenium(self):
+        try:
+            result_path2 = f"{self._dir_name}/sample_data.xlsx"
+            # result_path2 = str(Path(result_path2)).replace("\\", "/").strip()
+            #  -f {result_path2}
+            import json
+            import shutil
+
+            to_file_path = "./acc_contents_selenium/sample_data.xlsx"
+            shutil.copyfile(result_path2, to_file_path)
+            os.system(
+                f"python ./acc_contents_selenium/acc_selenium.py -id {self.user_id.toPlainText().strip()} -pw {self.pw_id.toPlainText().strip()} -f {to_file_path}"
+            )
+        except Exception as e:
+            self.textBrowser_msg.append(str(e))
+            return 404
+        else:
+            return 200
 
     def getFileName(self):
         file_filter = "Data File (*.xlsx *.csv *.dat);; Excel File (*.xlsx *.xls)"
