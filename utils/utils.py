@@ -1,4 +1,6 @@
 from datetime import datetime, date
+
+
 import json
 from pandas import json_normalize
 import pandas as pd
@@ -8,6 +10,23 @@ import numpy as np
 import itertools
 from pathlib import Path
 import re
+from enum import Enum
+import os, sys
+
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+from utils.metadata import CODE_MAP_TABLE
+
+# class syntax
+class DayofWeek(Enum):
+    월 = 0
+    화 = 1
+    수 = 2
+    목 = 3
+    금 = 4
+    토 = 5
+    일 = 6
 
 
 def get_holiday(api_key):
@@ -44,6 +63,15 @@ def check_holiday(result_table, api_key):
     return result_table
 
 
+"test.test2+test3".split(".|+")
+import re
+
+
+def split_text(text):
+    text = text.parts[-1].split(".")[0]
+    return re.split("\.|\+", text)
+
+
 def get_sales_check_of_credit_card(path, year, month, api_key):
     path = rf"{path}"
     folder = Path(path)
@@ -54,7 +82,7 @@ def get_sales_check_of_credit_card(path, year, month, api_key):
     assert len(list(folder.glob(img_format))) != 0, "파일 인식 문제 발생"
     max_col = 0
     for i in list(folder.glob(img_format)):
-        result.append([i.replace("_", "") for i in i.parts[-1].split(".")[0].split("+")])
+        result.append([i.replace("_", "") for i in split_text(i)])
         max_col = max([max_col, len(result[-1])])
     else:
         if max_col == 3:
@@ -83,6 +111,9 @@ def get_sales_check_of_credit_card(path, year, month, api_key):
     result2 = result.groupby(["날짜", "태그", "비고"], as_index=False).apply(
         lambda x: pd.Series(dict(총합=sum(x["가격"]), 특이사항=x["비고"].tolist()))
     )
+    for i in list(set(result2["날짜"]).difference(set(total_date["day"]))):
+        total_date = total_date.append({"day": i, "dayofweek": DayofWeek(i.weekday()).name}, ignore_index=True)
+
     result_table = pd.merge(total_date, result2, left_on="day", right_on="날짜", how="outer").drop(columns=["날짜"])
     result_table = check_holiday(result_table, api_key)
     return result_table
@@ -90,12 +121,13 @@ def get_sales_check_of_credit_card(path, year, month, api_key):
 
 def make_sales_info(result_table: pd.DataFrame):
     result_table = result_table.query("총합 > 0")
-    tmp_replace_dict = {
-        "저녁": "석식",
-        "점심": "중식",
-        "통신요금": "통신비",
-    }
-    result_table["태그"] = result_table["태그"].replace(tmp_replace_dict)
+    # tmp_replace_dict = {
+    #     "저녁": "석식",
+    #     "점심": "중식",
+    #     "통신요금": "통신비",
+    # }
+    print(result_table)
+    result_table["태그"] = result_table["태그"].replace(CODE_MAP_TABLE)
     result_table["day"] = result_table["day"].dt.strftime("%Y%m%d").astype(int)
     result_table["howmany"] = "1명"  # TODO:
     result_table = result_table[["day", "태그", "howmany", "총합", "특이사항"]]

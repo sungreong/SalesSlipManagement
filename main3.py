@@ -33,6 +33,7 @@ import json
 from pathlib import Path
 import pandas as pd
 
+pattern = ""
 
 SalesType = [
     "중식",
@@ -129,7 +130,7 @@ class MyApp(QMainWindow):
         self.textBrowser = QTextBrowser()
         self.textBrowser.setOpenExternalLinks(True)
         self.textBrowser.setStyleSheet("font-size: 15px;")
-        self.textBrowser.setFixedHeight(50)
+        self.textBrowser.setFixedHeight(100)
         self.textBrowser.append("API KEY를 발급 받아 아래 텍스트 박스에 넣어주세요.")
         self.textBrowser.append("<a href=https://www.data.go.kr/data/15012690/openapi.do>한국천문연구원_특일 정보</a>")
 
@@ -157,7 +158,7 @@ class MyApp(QMainWindow):
 
         self.textBrowser_msg = QTextBrowser()
         self.textBrowser_msg.setStyleSheet("font-size: 15px;")
-        self.textBrowser_msg.setFixedHeight(100)
+        self.textBrowser_msg.setFixedHeight(200)
         mytext.addRow(self.textBrowser_msg)
         # layout.addWidget(self.textBrowser_msg)
 
@@ -238,13 +239,10 @@ class MyApp(QMainWindow):
 
             result.to_excel(writer, sheet_name="식대")
 
-            report_sales_info = make_sales_info(result_table=result)
-            report_sales_info.to_excel(writer2, index=False)
-            writer2.close()
             n_day_of_unique = result["day"].nunique()
             event = ["휴가", "휴일"]
             n_day_of_not_event_unique = result.query("특이사항 not in @event")["day"].nunique()
-            luncu_tag = ["'점심'", "'중식'"]
+            luncu_tag = ["점심", "중식"]
             lunch_total = result.query("태그 in @luncu_tag")["총합"].sum()
             lunch_event = pd.DataFrame(
                 [
@@ -263,7 +261,12 @@ class MyApp(QMainWindow):
             writer.close()
 
             self.textBrowser_msg.clear()
-            self.textBrowser_msg.append("결과 테이블 저장 완료...")
+            self.textBrowser_msg.append("결과 테이블 저장 완료...[1/2]")
+
+            report_sales_info = make_sales_info(result_table=result)
+            report_sales_info.to_excel(writer2, index=False)
+            writer2.close()
+            self.textBrowser_msg.append("sales 테이블 저장 완료...[2/2]")
 
             self.textBrowser_msg.append(f"폴더 경로 : {Path(result_path).parent}")
 
@@ -276,7 +279,7 @@ class MyApp(QMainWindow):
             os.startfile(folder_path)
             return 200
         except Exception as e:
-            self.textBrowser_msg.clear()
+            # self.textBrowser_msg.clear()
             self.textBrowser_msg.append("Error... 테이블 생성 에러...")
             self.textBrowser_msg.append(str(e))
             return 404
