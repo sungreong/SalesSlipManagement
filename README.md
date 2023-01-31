@@ -41,7 +41,7 @@ https://www.data.go.kr/data/15012690/openapi.do
 # 실행 코드
 
 ```
-python main_v2.py
+python main_v3.py
 ```
 
 # 실행 화면
