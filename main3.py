@@ -21,6 +21,7 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.append(root_dir)
 from utils.utils import make_sales_info, get_sales_check_of_credit_card
+from utils.ui import TableView
 import csv
 
 import configparser
@@ -181,6 +182,9 @@ class MyApp(QMainWindow):
         btn2 = QPushButton("제출 실행")
         btn2.clicked.connect(self.run_acc_selenium)
         mytext.addRow(btn2)
+        ###################
+
+        
 
     def handleSavemon(self):
         #        with open('monschedule.csv', 'wb') as stream:
