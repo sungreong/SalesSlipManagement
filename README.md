@@ -167,7 +167,7 @@ tag는 아래 항목만 가능합니다.
 ## sample_data.xslx
 
 - 제출용 파일 생성 
-
+- TODO: 인원수에 대한 부분은 반영하지 못함(개선 필요)
 # ToDo List
 
 - [x] 기존에 다른 분께서 만든 코드 결과물 포맷 반영 [로건 자동 월망 청구 코드 링크](https://github.com/hotorch/acc_contents_selenium)
