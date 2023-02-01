@@ -36,12 +36,24 @@ https://www.data.go.kr/data/15012690/openapi.do
 # 실행 코드
 
 ```
-python main_v3.py
+python main.py
 ```
 
 # 실행 화면
 
-![화면](./output.PNG)
+## 메인 화면
+
+![메인 화면](./imgs/main.PNG)
+
+
+## 테이블 화면
+
+![테이블 화면](./imgs/table.PNG)
+
+
+## 패턴 체크 화면
+
+![패턴 화면](./imgs/pattern.PNG)
 
 ## 가이드 
 
@@ -59,7 +71,7 @@ python main_v3.py
 
 
 # 최신 코드
-main_v2.py
+main.py
 
 # 패키지
 
@@ -72,13 +84,11 @@ pip install -r requirements.txt
 ```
 
 # EXE 파일 만들기
-pyinstaller --noconsole --onefile --icon=agilesoda.ico main.py
-pyinstaller --noconsole --onefile --icon=agilesoda.ico main_v2.py
-
+pyinstaller --noconsole --onefile --icon=./imgs/agilesoda.ico main.py
 # 실행
 
 ```
-python main3.py
+python main.py
 ```
 
 # 이미지 파일 형식
