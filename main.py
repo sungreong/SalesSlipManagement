@@ -368,7 +368,7 @@ class MyTabWidget(QWidget):
             writer = pd.ExcelWriter(result_path, engine="xlsxwriter")
             writer2 = pd.ExcelWriter(result_path2, engine="xlsxwriter")
 
-            result.to_excel(writer, sheet_name="식대")
+            result.to_excel(writer, sheet_name="지출내역")
 
             n_day_of_unique = result["day"].nunique()
             event = ["휴가", "휴일"]
