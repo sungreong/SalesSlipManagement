@@ -210,7 +210,24 @@ class MyTabWidget(QWidget):
         self.tab1.setLayout(self.tab1.layout)
 
     def define_tab2(self):
+
         self.tab2.layout = QFormLayout(self)
+        today = datetime.now().strftime("%Y%m%d")
+        msg = f"""
+        (YYYYMMDD)+(TAG)+(PRICE).jpg        
+        예시
+        {today}+점심+2_000+1.jpg
+        {today}+점심+5_000+2.jpg
+        {today}+통신비+15_000.jpg
+        """
+
+        readme = QLabel(msg)
+        readme.setFixedWidth(1000)  # +++
+        readme.setMinimumHeight(30)
+        font1 = readme.font()
+        font1.setPointSize(10)
+        self.tab2.layout.addRow(readme)
+
         font = QFont()
         font.setPointSize(10)
         self.tableWidget = QTableWidget()
