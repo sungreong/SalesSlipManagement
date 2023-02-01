@@ -16,12 +16,14 @@ from PyQt5.QtWidgets import (
     QTableWidget,
 )
 from time import sleep
+from qtwidgets import PasswordEdit
 
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.append(root_dir)
-from utils.utils import make_sales_info, get_sales_check_of_credit_card
+from utils.utils import make_sales_info, get_sales_check_of_credit_card, CODE_MAP_TABLE
 from utils.ui import TableView
+
 import csv
 
 import configparser
@@ -58,44 +60,52 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from datetime import datetime
 
+# Creating tab widgets
+class MyTabWidget(QWidget):
+    def __init__(self, parent):
+        super(QWidget, self).__init__(parent)
+        self.layout = QVBoxLayout(self)
 
-class MyApp(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.title = "매출전표 정리"
-        self.left = 10
-        self.top = 10
-        self.setWindowTitle(self.title)
-        self.window_width, self.window_height = 800, 200
-        # self.setMinimumSize(self.window_width, self.window_height)
-        self.setGeometry(self.left, self.top, self.window_width, self.window_height)
+        # Initialize tab screen
+        self.tabs = QTabWidget()
+        self.tab1 = QWidget()
+        self.tab2 = QWidget()
+        self.tab3 = QWidget()
+        self.tabs.resize(300, 200)
 
-        # self.widget_tab = QWidget()
-        # self.buttonSave_tab = QPushButton("Save", self)
-        # self.buttonSave_tab.clicked.connect(self.handleSavemon)
+        # Add tabs
+        self.tabs.addTab(self.tab1, "main")
+        self.tabs.addTab(self.tab2, "table")
+        self.tabs.addTab(self.tab3, "Geeks")
 
-        # layout = QVBoxLayout()
-        # self.setLayout(layout)
-        wid1 = QWidget(self)
-        self.setCentralWidget(wid1)
-        self.month_options = [str(i) for i in list(range(1, 13))]
-        self.year_options = [str(i) for i in list(range(2022, 2027))]
+        self.define_tab1()
+        self.define_tab2()
 
+        # Add tabs to widget
+        self.layout.addWidget(self.tabs)
+        self.setLayout(self.layout)
+
+    def define_tab1(self):
+        # Create first tab
+        self.tab1.layout = QFormLayout(self)
+        ################################################
         currentYear = str(datetime.now().year)
         currentMonth = str(datetime.now().month)
-
+        # self.buttonSave_tab = QPushButton("Save", self)
+        # self.buttonSave_tab.clicked.connect(self.handleSavemon)
+        self.month_options = [str(i) for i in list(range(1, 13))]
+        self.year_options = [str(i) for i in list(range(2022, 2027))]
         self.combo_year = QComboBox()
         self.combo_year.addItems(self.year_options)
         self.combo_year.setCurrentIndex(self.year_options.index(currentYear))
         self.combo_month = QComboBox()
         self.combo_month.addItems(self.month_options)
         self.combo_month.setCurrentIndex(self.month_options.index(currentMonth))
-        mytext = QFormLayout()
+        ###########
         label_yr = QLabel("Year ")
         label_mn = QLabel("Month")
-        mytext.addRow(label_yr, self.combo_year)
-        mytext.addRow(label_mn, self.combo_month)
-        wid1.setLayout(mytext)
+        self.tab1.layout.addRow(label_yr, self.combo_year)
+        self.tab1.layout.addRow(label_mn, self.combo_month)
 
         self.options = ("Get Folder Dir", "Run")
         # "Get File Name", "Get File Names", "Save File Name"
@@ -106,7 +116,7 @@ class MyApp(QMainWindow):
         btn = QPushButton("Get Folder Directory")
         btn.clicked.connect(self.getDirectory)
         label_dir = QLabel("Directory")
-        mytext.addRow(label_dir, btn)
+        self.tab1.layout.addRow(label_dir, btn)
         # TODO: 꾸미기
         # layout.addWidget(btn)
 
@@ -116,7 +126,7 @@ class MyApp(QMainWindow):
         self.textBrowser_dir = QTextBrowser()
         self.textBrowser_dir.setStyleSheet("font-size: 15px;")
         self.textBrowser_dir.setFixedHeight(70)
-        mytext.addRow(QLabel("폴더위치"), self.textBrowser_dir)
+        self.tab1.layout.addRow(QLabel("폴더위치"), self.textBrowser_dir)
         # layout.addWidget(self.textBrowser_dir)
 
         # ### EVENT
@@ -124,7 +134,7 @@ class MyApp(QMainWindow):
         self.event_text_edit.setStyleSheet("font-size: 15px;")
         self.event_text_edit.setFixedHeight(50)
         self.event_text_edit.setPlaceholderText(r"이벤트 일자를 넣어 주세요 1,휴가;2,휴가;")
-        mytext.addRow(QLabel("이벤트기입  "), self.event_text_edit)
+        self.tab1.layout.addRow(QLabel("이벤트기입  "), self.event_text_edit)
         # layout.addWidget(self.event_text_edit)
 
         # ### API KEY LINK
@@ -135,33 +145,39 @@ class MyApp(QMainWindow):
         self.textBrowser.append("API KEY를 발급 받아 아래 텍스트 박스에 넣어주세요.")
         self.textBrowser.append("<a href=https://www.data.go.kr/data/15012690/openapi.do>한국천문연구원_특일 정보</a>")
 
-        mytext.addRow(QLabel("참고  "), self.textBrowser)
+        self.tab1.layout.addRow(QLabel("참고  "), self.textBrowser)
         # layout.addWidget(self.textBrowser)
-        self.text_edit = QTextEdit(self)
+        self.text_edit = PasswordEdit()
+
         self.text_edit.setStyleSheet("font-size: 15px;")
         self.text_edit.setFixedHeight(50)
         if Path("./apikey.json").is_file():
             f = open("./apikey.json")
-            self.text_edit.setPlainText(str(json.load(f)["key"]))
+            self.text_edit.setText(str(json.load(f)["key"]))
         else:
             self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요")
-        mytext.addRow(QLabel("API KEY  "), self.text_edit)
+        self.tab1.layout.addRow(QLabel("API KEY  "), self.text_edit)
         # layout.addWidget(self.text_edit)
 
         btn = QPushButton("Run")
         btn.clicked.connect(self.get_table)
-        mytext.addRow(btn)
+        self.tab1.layout.addRow(btn)
         # layout.addWidget(btn)
-
-        # btn = QPushButton("Launch")
-        # btn.clicked.connect(self.launchDialog)
-        # layout.addWidget(btn)
-
         self.textBrowser_msg = QTextBrowser()
         self.textBrowser_msg.setStyleSheet("font-size: 15px;")
-        self.textBrowser_msg.setFixedHeight(200)
-        mytext.addRow(self.textBrowser_msg)
+        self.textBrowser_msg.setFixedHeight(150)
+        self.tab1.layout.addRow(self.textBrowser_msg)
         # layout.addWidget(self.textBrowser_msg)
+        ########### chrome driver
+        btn = QPushButton("Find ChromDriver")
+        btn.clicked.connect(self.get_chrome_driver)
+        label_dir = QLabel("ChromDriver")
+        self.tab1.layout.addRow(label_dir, btn)
+        self.textBrowser_chrome_driver_msg = QTextBrowser()
+        self.textBrowser_chrome_driver_msg.setStyleSheet("font-size: 15px;")
+        self.textBrowser_chrome_driver_msg.setFixedHeight(50)
+        label_dir = QLabel("Directory")
+        self.tab1.layout.addRow(label_dir, self.textBrowser_chrome_driver_msg)
 
         # ### USER
         self.user_id = QTextEdit()
@@ -170,50 +186,67 @@ class MyApp(QMainWindow):
         self.user_id.setPlaceholderText(r"USER의 ID를 입력하세요")
         label = QLabel("USER  ")
         label.setFont(QFont("Arial", 10))
-        mytext.addRow(label, self.user_id)
+        self.tab1.layout.addRow(label, self.user_id)
         # ### PW
-        self.pw_id = QTextEdit()
-        self.pw_id.setStyleSheet("font-size: 20px;")
+
+        self.pw_id = PasswordEdit()
+        # self.pw_id.setText("")
+        # self.pw_id = QTextEdit()
+        # self.pw_id.setStyleSheet("font-size: 20px;")
         self.pw_id.setFixedHeight(50)
         self.pw_id.setPlaceholderText(r"USER의 PW를 입력하세요")
         label = QLabel("PASSWORD ")
         label.setFont(QFont("Arial", 10))
-        mytext.addRow(label, self.pw_id)
+        self.tab1.layout.addRow(label, self.pw_id)
         btn2 = QPushButton("제출 실행")
         btn2.clicked.connect(self.run_acc_selenium)
-        mytext.addRow(btn2)
-        ###################
+        self.tab1.layout.addRow(btn2)
+        # font = QFont()
+        # font.setPointSize(1)
 
-        
+        # password = PasswordEdit()
+        # password.setText("hi")
+        # self.tab1.layout.addRow(password)
+        self.tab1.setLayout(self.tab1.layout)
 
-    def handleSavemon(self):
-        #        with open('monschedule.csv', 'wb') as stream:
-        with open("monschedule.csv", "w") as stream:  # 'w'
-            writer = csv.writer(stream, lineterminator="\n")  # + , lineterminator='\n'
-            for row in range(self.tablewidgetmon.rowCount()):
-                rowdata = []
-                for column in range(self.tablewidgetmon.columnCount()):
-                    item = self.tablewidgetmon.item(row, column)
-                    if item is not None:
-                        #                        rowdata.append(unicode(item.text()).encode('utf8'))
-                        rowdata.append(item.text())  # +
-                    else:
-                        rowdata.append("")
+    def define_tab2(self):
+        self.tab2.layout = QFormLayout(self)
+        font = QFont()
+        font.setPointSize(10)
+        self.tableWidget = QTableWidget()
 
-                writer.writerow(rowdata)
+        self.tableWidget.setRowCount(len(CODE_MAP_TABLE))
+        self.tableWidget.setColumnCount(2)
+        for idx, (key, value) in enumerate(CODE_MAP_TABLE.items()):
+            # self.tableWidget.item(idx, 0).setFont(font)
+            # self.tableWidget.item(idx, 1).setFont(font)
+            v = QTableWidgetItem(key)
+            v.setFont(font)
+            self.tableWidget.setItem(idx, 0, v)
+            v = QTableWidgetItem(value)
+            v.setFont(font)
+            self.tableWidget.setItem(idx, 1, v)
 
-    def launchDialog(self):
-        option = self.options.index(self.combo.currentText())
-        if option == 0:
-            response = self.getDirectory()
-        elif option == 1:
-            response = self.get_table()
-        else:
-            print("Got Nothing")
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableWidget.verticalScrollBar().setValue(0)
+        self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        # self.tableWidget.horizontalHeader().setFixedHeight(100)
+        font = QFont()
+        font.setPointSize(15)
+        self.tableWidget.setHorizontalHeaderLabels(["태그", "표준적요코드"])
+        self.tableWidget.horizontalHeader().setDefaultSectionSize(15)
+        self.tab2.layout.addRow(self.tableWidget)
+        ##############
+        self.tab2.setLayout(self.tab2.layout)
+
+    def get_chrome_driver(self):
+        dir_name = QFileDialog.getExistingDirectory(self, caption="Select a ChromDriver Folder")
+        response = dir_name
+        self.textBrowser_chrome_driver_msg.append(response)
 
     def get_table(self):
         try:
-            api_key = self.text_edit.toPlainText()
+            api_key = self.text_edit.text()
             print("API KEY : ", api_key)
             if self._dir_name == "":
                 self.textBrowser_msg.append("Warnings....")
@@ -298,8 +331,9 @@ class MyApp(QMainWindow):
 
             to_file_path = "./acc_contents_selenium/sample_data.xlsx"
             shutil.copyfile(result_path2, to_file_path)
+            chrom_driver_path = self.textBrowser_chrome_driver_msg.toPlainText()
             os.system(
-                f"python ./acc_contents_selenium/acc_selenium.py -id {self.user_id.toPlainText().strip()} -pw {self.pw_id.toPlainText().strip()} -f {to_file_path}"
+                f"python ./acc_contents_selenium/acc_selenium.py -id {self.user_id.toPlainText().strip()} -pw {self.pw_id.text().strip()} -f {to_file_path} -c {chrom_driver_path}"
             )
         except Exception as e:
             self.textBrowser_msg.append(str(e))
@@ -330,11 +364,9 @@ class MyApp(QMainWindow):
         return response[0]
 
     def getDirectory(self):
-
         self._dir_name = QFileDialog.getExistingDirectory(self, caption="Select a folder")
         response = self._dir_name
-        self.textBrowser_dir.append(self._dir_name)
-
+        self.textBrowser_dir.append(response)
         return response
 
     def getSaveFileName(self):
@@ -347,6 +379,21 @@ class MyApp(QMainWindow):
             initialFilter="Excel File (*.xlsx *.xls)",
         )
         return response[0]
+
+
+class MyApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.title = "매출전표 정리"
+        self.left = 10
+        self.top = 10
+        self.setWindowTitle(self.title)
+        self.window_width, self.window_height = 800, 200
+        # self.setMinimumSize(self.window_width, self.window_height)
+        self.setGeometry(self.left, self.top, self.window_width, self.window_height)
+
+        self.tab_widget = MyTabWidget(self)
+        self.setCentralWidget(self.tab_widget)
 
 
 if __name__ == "__main__":
