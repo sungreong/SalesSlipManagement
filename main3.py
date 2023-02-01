@@ -21,7 +21,7 @@ from qtwidgets import PasswordEdit
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.append(root_dir)
-from utils.utils import make_sales_info, get_sales_check_of_credit_card, CODE_MAP_TABLE
+from utils.utils import make_sales_info, get_sales_check_of_credit_card, CODE_MAP_TABLE, split_text
 from utils.ui import TableView
 
 import csv
@@ -76,11 +76,11 @@ class MyTabWidget(QWidget):
         # Add tabs
         self.tabs.addTab(self.tab1, "main")
         self.tabs.addTab(self.tab2, "table")
-        self.tabs.addTab(self.tab3, "Geeks")
+        self.tabs.addTab(self.tab3, "pattern")
 
         self.define_tab1()
         self.define_tab2()
-
+        self.define_tab3()
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
         self.setLayout(self.layout)
@@ -255,6 +255,53 @@ class MyTabWidget(QWidget):
         self.tab2.layout.addRow(self.tableWidget)
         ##############
         self.tab2.setLayout(self.tab2.layout)
+
+    def define_tab3(self):
+
+        self.tab3.layout = QFormLayout(self)
+
+        today = datetime.now().strftime("%Y%m%d")
+        msg = f"""
+        (YYYYMMDD)+(TAG)+(PRICE).jpg        
+        예시
+        {today}+점심+2_000+1.jpg
+        {today}+점심+5_000+2.jpg
+        {today}+통신비+15_000.jpg
+        """
+
+        readme = QLabel(msg)
+        readme.setFixedWidth(1000)  # +++
+        readme.setMinimumHeight(30)
+        font1 = readme.font()
+        font1.setPointSize(10)
+        self.tab3.layout.addRow(readme)
+
+        self.file_pattern_id = QTextEdit()
+        self.file_pattern_id.setStyleSheet("font-size: 20px;")
+        self.file_pattern_id.setFixedHeight(50)
+        self.file_pattern_id.setPlaceholderText(r"예시 파일 이름을 넣어보세요")
+        label = QLabel("PATTERN  ")
+        label.setFont(QFont("Arial", 10))
+        self.tab3.layout.addRow(label, self.file_pattern_id)
+
+        self.file_pattern_result = QTextBrowser()
+        self.file_pattern_result.setStyleSheet("font-size: 20px;")
+        self.file_pattern_result.setFixedHeight(50)
+        label = QLabel("테스트결과  ")
+        label.setFont(QFont("Arial", 10))
+        self.tab3.layout.addRow(label, self.file_pattern_result)
+
+        btn = QPushButton("테스트 실행")
+        btn.clicked.connect(self.get_pattern)
+        self.tab3.layout.addRow(btn)
+
+        self.tab3.setLayout(self.tab3.layout)
+
+    def get_pattern(self):
+        file_name = self.file_pattern_id.toPlainText().strip()
+        results = split_text(Path(file_name))
+        self.file_pattern_result.clear()
+        self.file_pattern_result.append(str(results))
 
     def get_chrome_driver(self):
         dir_name = QFileDialog.getExistingDirectory(self, caption="Select a ChromDriver Folder")
