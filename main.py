@@ -20,7 +20,7 @@ from qtwidgets import PasswordEdit
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.append(root_dir)
-from utils.utils import make_sales_info, get_sales_check_of_credit_card, CODE_MAP_TABLE, split_text
+from utils.utils import make_sales_info, get_sales_check_of_credit_card, split_text, detect_encoding
 from utils.ui import TableView
 import configparser
 
@@ -244,11 +244,14 @@ class MyTabWidget(QWidget):
         self.tab2.layout = QFormLayout(self)
         today = datetime.now().strftime("%Y%m%d")
         msg = f"""
-        (YYYYMMDD)+(TAG)+(PRICE).jpg        
-        예시
-        {today}+점심+2_000+1.jpg
-        {today}+점심+5_000+2.jpg
-        {today}+통신비+15_000.jpg
+        [standardbriefscode.csv]
+
+        위의 파일에 추가적으로 간소화된 표현을 작성하고,
+        표준적요설명을 적어주시면 제출할 때 반영됩니다.
+        
+        (YYYYMMDD)+(TAG)+(PRICE)+(특이사항).jpg        
+        예) {today}+점심+2_000+1명.jpg
+        예) {today}+점심+50000+5명.jpg
         """
 
         readme = QLabel(msg)
@@ -261,18 +264,15 @@ class MyTabWidget(QWidget):
         font = QFont()
         font.setPointSize(10)
         self.tableWidget = QTableWidget()
-
-        self.tableWidget.setRowCount(len(CODE_MAP_TABLE))
-        self.tableWidget.setColumnCount(2)
-        for idx, (key, value) in enumerate(CODE_MAP_TABLE.items()):
-            # self.tableWidget.item(idx, 0).setFont(font)
-            # self.tableWidget.item(idx, 1).setFont(font)
-            v = QTableWidgetItem(key)
-            v.setFont(font)
-            self.tableWidget.setItem(idx, 0, v)
-            v = QTableWidgetItem(value)
-            v.setFont(font)
-            self.tableWidget.setItem(idx, 1, v)
+        encoding = detect_encoding("./standardbriefscode.csv")
+        MAPPING_TABLE = pd.read_csv("./standardbriefscode.csv", encoding=encoding)
+        self.tableWidget.setRowCount(MAPPING_TABLE.shape[0])
+        self.tableWidget.setColumnCount(MAPPING_TABLE.shape[1])
+        for idx, one_row in MAPPING_TABLE.iterrows():
+            for idx2, (_, v) in enumerate(one_row.to_dict().items()):
+                v = QTableWidgetItem(str(v))
+                v.setFont(font)
+                self.tableWidget.setItem(idx, idx2, v)
 
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.verticalScrollBar().setValue(0)
@@ -280,8 +280,9 @@ class MyTabWidget(QWidget):
         # self.tableWidget.horizontalHeader().setFixedHeight(100)
         font = QFont()
         font.setPointSize(15)
-        self.tableWidget.setHorizontalHeaderLabels(["태그", "표준적요코드"])
-        self.tableWidget.horizontalHeader().setDefaultSectionSize(15)
+        self.tableWidget.setHorizontalHeaderLabels(list(MAPPING_TABLE))
+        # self.tableWidget.horizontalHeader().setDefaultSectionSize(15)
+
         self.tab2.layout.addRow(self.tableWidget)
         ##############
         self.tab2.setLayout(self.tab2.layout)

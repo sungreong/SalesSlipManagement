@@ -14,9 +14,10 @@ from enum import Enum
 import os, sys
 
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+print(root_dir)
 if root_dir not in sys.path:
     sys.path.append(root_dir)
-from utils.metadata import CODE_MAP_TABLE
+import pandas as pd
 
 # class syntax
 class DayofWeek(Enum):
@@ -76,7 +77,7 @@ def get_sales_check_of_credit_card(path, year, month, api_key):
     path = rf"{path}"
     folder = Path(path)
     result = []
-    img_format = "*[PNG$|jpg$|png$]"
+    img_format = "*[PNG$|jpg$|png$|jpeg$|SVG$|bmp$]"
     print(folder.glob(img_format))
     print(list(folder.glob(img_format)))
     assert len(list(folder.glob(img_format))) != 0, "파일 인식 문제 발생"
@@ -126,6 +127,9 @@ def make_sales_info(result_table: pd.DataFrame):
     #     "점심": "중식",
     #     "통신요금": "통신비",
     # }
+    encoding = detect_encoding("./standardbriefscode.csv")
+    MAPPING_TABLE = pd.read_csv("./standardbriefscode.csv", encoding=encoding)
+    CODE_MAP_TABLE = dict(zip(MAPPING_TABLE["간소화"], MAPPING_TABLE["표준적요설명"]))
     print(result_table)
     result_table["태그"] = result_table["태그"].replace(CODE_MAP_TABLE)
     result_table["day"] = result_table["day"].dt.strftime("%Y%m%d").astype(int)
@@ -134,3 +138,11 @@ def make_sales_info(result_table: pd.DataFrame):
     result_table.columns = ["date", "type", "howmany", "amount", "etc"]
     result_table["etc"] = result_table["etc"].apply(lambda x: re.sub(r"[^\uAC00-\uD7A30-9a-zA-Z\s]", "", str(x)))
     return result_table
+
+
+def detect_encoding(file):
+    import chardet
+
+    with open(file, "rb") as file:
+        encoding = chardet.detect(file.read())["encoding"]
+    return encoding
