@@ -18,6 +18,7 @@ print(root_dir)
 if root_dir not in sys.path:
     sys.path.append(root_dir)
 import pandas as pd
+import re
 
 # class syntax
 class DayofWeek(Enum):
@@ -64,8 +65,12 @@ def check_holiday(result_table, api_key):
     return result_table
 
 
-"test.test2+test3".split(".|+")
-import re
+def detect_encoding(file):
+    import chardet
+
+    with open(file, "rb") as file:
+        encoding = chardet.detect(file.read())["encoding"]
+    return encoding
 
 
 def split_text(text):
@@ -73,16 +78,21 @@ def split_text(text):
     return re.split("\.|\+", text)
 
 
-def get_sales_check_of_credit_card(path, year, month, api_key):
+def get_img_list(path):
     path = rf"{path}"
     folder = Path(path)
-    result = []
     img_format = "*[PNG$|jpg$|png$|jpeg$|SVG$|bmp$]"
-    print(folder.glob(img_format))
-    print(list(folder.glob(img_format)))
-    assert len(list(folder.glob(img_format))) != 0, "파일 인식 문제 발생"
+    print(folder)
+    num_of_imgs_file = list(folder.glob(img_format))
+    assert len(num_of_imgs_file) != 0, "파일 인식 문제 발생"
+    return num_of_imgs_file
+
+
+def get_sales_check_of_credit_card(path, year, month, api_key):
     max_col = 0
-    for i in list(folder.glob(img_format)):
+    result = []
+    img_file_path_list = get_img_list(path)
+    for i in img_file_path_list:
         result.append([i.replace("_", "") for i in split_text(i)])
         max_col = max([max_col, len(result[-1])])
     else:
@@ -138,11 +148,3 @@ def make_sales_info(result_table: pd.DataFrame):
     result_table.columns = ["date", "type", "howmany", "amount", "etc"]
     result_table["etc"] = result_table["etc"].apply(lambda x: re.sub(r"[^\uAC00-\uD7A30-9a-zA-Z\s]", "", str(x)))
     return result_table
-
-
-def detect_encoding(file):
-    import chardet
-
-    with open(file, "rb") as file:
-        encoding = chardet.detect(file.read())["encoding"]
-    return encoding

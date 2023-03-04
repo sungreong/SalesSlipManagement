@@ -20,9 +20,21 @@ from qtwidgets import PasswordEdit
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.append(root_dir)
-from utils.utils import make_sales_info, get_sales_check_of_credit_card, split_text, detect_encoding
-from utils.ui import TableView
+from utils.utils import (
+    make_sales_info,
+    get_sales_check_of_credit_card,
+    split_text,
+    detect_encoding,
+    get_img_list,
+)
 import configparser
+from datetime import datetime
+from pathlib import Path
+import pandas as pd
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from datetime import datetime
 
 
 def read_config():
@@ -32,35 +44,10 @@ def read_config():
     return my_config_parser_dict
 
 
-from datetime import datetime, date
-import json
+def generate_error(e):
+    log = f"Error Type : {type(e).__name__}\n File : {__file__}\n Line Number : {e.__traceback__.tb_lineno}\n Error msg={str(e)}"
+    return log
 
-from pathlib import Path
-import pandas as pd
-
-pattern = ""
-
-SalesType = [
-    "중식",
-    "석식",
-    "야근 택시비",
-    "문화마일리지",
-    "조식",
-    "통신비",
-    "국내출장 교통비",
-    "국내출장 식대",
-    "국내출장 숙박",
-    "국내출장 주차비",
-    "업무영 도서구입",
-    "사무용품",
-    "전산용품",
-]
-
-
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from datetime import datetime
 
 # Creating tab widgets
 class MyTabWidget(QWidget):
@@ -135,9 +122,8 @@ class MyTabWidget(QWidget):
         self.event_text_edit = QTextEdit()
         self.event_text_edit.setStyleSheet("font-size: 15px;")
         self.event_text_edit.setFixedHeight(50)
-        self.event_text_edit.setPlaceholderText(r"이벤트 일자를 넣어 주세요 1,휴가;2,휴가;")
-        self.tab1.layout.addRow(QLabel("이벤트기입  "), self.event_text_edit)
-        # layout.addWidget(self.event_text_edit)
+        self.event_text_edit.setPlaceholderText(r"휴가 일자를 넣어 주세요 1,휴가/2,휴가/")
+        self.tab1.layout.addRow(QLabel("휴가   "), self.event_text_edit)
 
         # ### API KEY LINK
         self.textBrowser = QTextBrowser()
@@ -337,25 +323,49 @@ class MyTabWidget(QWidget):
     def get_chrome_driver(self):
         dir_name = QFileDialog.getExistingDirectory(self, caption="Select a ChromDriver Folder")
         response = dir_name
-        self.textBrowser_chrome_driver_msg.append(response)
+        try:
+            if Path(dir_name).joinpath("chromedriver.exe").is_file() is False:
+                raise FileNotFoundError("chromedriver.exe 존재하지 않습니다.")
+        except FileNotFoundError as e:
+            self.textBrowser_msg.append(f"Folder : {dir_name}")
+            self.textBrowser_msg.append("해당 폴더에는 chromdriver.exe가 존재하지 않습니다.")
+            return 404
+        else:
+            self.textBrowser_chrome_driver_msg.append(response)
+
+    def check_exist_img_directory(self):
+        if hasattr(self, "_dir_name") is False:
+            self.textBrowser_msg.append("Warnings....")
+            self.textBrowser_msg.append("폴더 경로를 정하지 않았습니다.")
+            self.textBrowser_msg.append("매출전표가 있는 폴더 경로부터 지정해주세요.")
+            raise NotADirectoryError("Directory를 설정해주셔야 합니다.")
 
     def get_table(self):
         try:
+            self.textBrowser_msg.clear()
             api_key = self.text_edit.text()
             print("API KEY : ", api_key)
-            if self._dir_name == "":
-                self.textBrowser_msg.append("Warnings....")
-                self.textBrowser_msg.append("폴더 경로를 정하지 않았습니다.")
-                self.textBrowser_msg.append("매출전표가 있는 폴더 경로부터 지정해주세요.")
-            if api_key == "":
+            self.check_exist_img_directory()
+            img_file_list = get_img_list(self._dir_name)
+            yyyymmdd = img_file_list[0].name.split("+")[0]
+            print(str(img_file_list[0]), yyyymmdd)
+            img_month = datetime.strptime(yyyymmdd, "%Y%m%d").month
+            if int(img_month) != int(self.combo_month.currentText()):
+                raise Exception(
+                    f"image에 있는 날짜와 Month에 있는 날짜가 다릅니다. {int(img_month)} != {int(self.combo_month.currentText())}"
+                )
+            if api_key == "" or len(api_key) == 0:
                 self.textBrowser_msg.append("Warnings....")
                 self.textBrowser_msg.append("API KEY를 입력하지 않았습니다")
                 self.textBrowser_msg.append("API KEY를 입력해주세요")
+                raise Exception("참고를 참고하여 API를 동록해주셔야 합니다.")
             month = int(self.combo_month.currentText())
             year = int(self.combo_year.currentText())
+
+            self.textBrowser_msg.append("테이블 작업 진행중...")
             result = get_sales_check_of_credit_card(self._dir_name, year, month, api_key)
 
-            event_list = self.event_text_edit.toPlainText().strip().split(";")
+            event_list = self.event_text_edit.toPlainText().strip().split("/")
 
             for event in event_list:
                 if event == "":
@@ -368,34 +378,44 @@ class MyTabWidget(QWidget):
             result_path2 = f"{self._dir_name}/sample_data.xlsx"
             writer = pd.ExcelWriter(result_path, engine="xlsxwriter")
             writer2 = pd.ExcelWriter(result_path2, engine="xlsxwriter")
-
-            result.to_excel(writer, sheet_name="지출내역")
+            result2 = result.copy()
+            result2["day"] = result2["day"].dt.strftime("%Y%m%d").astype(int)
+            result2.to_excel(writer, sheet_name="지출내역")
 
             n_day_of_unique = result["day"].nunique()
-            event = ["휴가", "휴일"]
-            n_day_of_not_event_unique = result.query("특이사항 not in @event")["day"].nunique()
-            luncu_tag = ["점심", "중식"]
-            lunch_total = result.query("태그 in @luncu_tag")["총합"].sum()
-            lunch_event = pd.DataFrame(
+            EVENT = ["휴가", "휴일"]
+            n_day_of_not_event_unique = result.query("특이사항 not in @EVENT")["day"].nunique()
+
+            event_total_df = result.groupby(["태그"], as_index=False).sum()
+            event_total_df.to_excel(writer, sheet_name="총태그합")
+            report_sales_info = make_sales_info(result_table=result)
+            event_total_df = report_sales_info[["type", "amount"]].groupby(["type"], as_index=False).sum()
+            event_total_df.to_excel(writer, sheet_name="총태그합(제출버전)")
+            lunch_total = event_total_df.query("type == '중식대금(휴일포함)'")["amount"].values[0]
+
+            number_of_used_file = result2["특이사항"].apply(lambda x: len(x) if type(x) == list else 0).sum()
+            number_of_img_file = len(get_img_list(self._dir_name))
+            if number_of_used_file != number_of_img_file:
+                raise Exception("이미지를 전부 사용하지 않았습니다. 이미지 파일 패턴을 확인해주세요")
+            summary_table = pd.DataFrame(
                 [
                     {
                         "총근무일수": n_day_of_unique,
                         "총근무일수(이벤트제외)": n_day_of_not_event_unique,
-                        "현재까지 점심 사용 금액": lunch_total,
-                        "총사용가능금액(이벤트제외)": n_day_of_not_event_unique * 10_000,
-                        "잔여금액(이벤트제외)": n_day_of_not_event_unique * 10_000 - lunch_total,
+                        "사용한 이미지 수": number_of_used_file,
+                        "등록한 이미지 수": number_of_img_file,
+                        "[점심]사용금액": lunch_total,
+                        "[점심]총사용가능금액(이벤트제외)": n_day_of_not_event_unique * 10_000,
+                        "[점심]잔여금액(이벤트제외)": n_day_of_not_event_unique * 10_000 - lunch_total,
                     }
                 ]
             )
-            lunch_event.to_excel(writer, sheet_name="점심식대")
-            event_total_df = result.groupby(["태그"], as_index=False).sum()
-            event_total_df.to_excel(writer, sheet_name="총태그합")
+            summary_table.to_excel(writer, sheet_name="요약(체크)")
             writer.close()
 
             self.textBrowser_msg.clear()
             self.textBrowser_msg.append("결과 테이블 저장 완료...[1/2]")
 
-            report_sales_info = make_sales_info(result_table=result)
             report_sales_info.to_excel(writer2, index=False)
             writer2.close()
             self.textBrowser_msg.append("sales 테이블 저장 완료...[2/2]")
@@ -412,12 +432,14 @@ class MyTabWidget(QWidget):
             return 200
         except Exception as e:
             # self.textBrowser_msg.clear()
+            print(generate_error(e))
             self.textBrowser_msg.append("Error... 테이블 생성 에러...")
-            self.textBrowser_msg.append(str(e))
+            self.textBrowser_msg.append(generate_error(e))
             return 404
 
     def run_acc_selenium(self):
         try:
+            self.check_exist_img_directory()
             result_path2 = f"{self._dir_name}/sample_data.xlsx"
             # result_path2 = str(Path(result_path2)).replace("\\", "/").strip()
             #  -f {result_path2}
@@ -427,11 +449,14 @@ class MyTabWidget(QWidget):
             to_file_path = "./acc_contents_selenium/sample_data.xlsx"
             shutil.copyfile(result_path2, to_file_path)
             chrom_driver_path = self.textBrowser_chrome_driver_msg.toPlainText()
+            if Path(chrom_driver_path).joinpath("chromedriver.exe").is_file() is False:
+                raise FileNotFoundError(f"해당 폴더에는 chromedriver.exe 존재하지 않습니다. {chrom_driver_path}")
             os.system(
                 f"python ./acc_contents_selenium/acc_selenium.py -id {self.user_id.toPlainText().strip()} -pw {self.pw_id.text().strip()} -f {to_file_path} -c {chrom_driver_path}"
             )
         except Exception as e:
-            self.textBrowser_msg.append(str(e))
+            print(generate_error(e))
+            self.textBrowser_msg.append(generate_error(e))
             return 404
         else:
             return 200
@@ -461,6 +486,7 @@ class MyTabWidget(QWidget):
     def getDirectory(self):
         self._dir_name = QFileDialog.getExistingDirectory(self, caption="Select a folder")
         response = self._dir_name
+
         self.textBrowser_dir.append(response)
         return response
 

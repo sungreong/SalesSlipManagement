@@ -2,14 +2,20 @@ from enum import Enum
 
 # class syntax
 class CODE(Enum):
-    중식대금 = "중식"
-    석식대금 = "석식"
-    수 = "야근택시비"
+    수 = 2
     목 = 3
     금 = 4
     토 = 5
     일 = 6
 
+class DayofWeek(Enum):
+    월 = 0
+    화 = 1
+    수 = 2
+    목 = 3
+    금 = 4
+    토 = 5
+    일 = 6
 
 CODE_MAP_TABLE = {
     "중식": "중식대금",
