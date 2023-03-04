@@ -1,0 +1,8 @@
+chardet==5.1.0
+numpy==1.23.1
+pandas==1.4.3
+PyQt5==5.15.9
+qtwidgets==1.1
+requests==2.27.1
+selenium==3.141.0
+tqdm==4.63.0
