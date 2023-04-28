@@ -12,7 +12,7 @@ import pathlib
 parser = argparse.ArgumentParser()
 parser.add_argument("-id", type=str, help="id", required=False)
 parser.add_argument("-pw", type=str, help="pw", required=False)
-parser.add_argument("-c", type=str, help="pw", required=False)
+# parser.add_argument("-c", type=str, help="pw", required=False)
 parser.add_argument("-f", type=str, default="./sample_data.xlsx", required=False)
 args = vars(parser.parse_args())
 ver = "# version 0.0.6"
@@ -22,33 +22,26 @@ my_id = args["id"]
 # input("아이디를 입력해주세요 : ")
 my_passwords = args["pw"]
 # getpass.getpass("비밀번호를 입력해주세요 (masking되어 입력됩니다) : ")
-chromedriver_path = args["c"]
+# chromedriver_path = args["c"]
 options = webdriver.ChromeOptions()
 print("C:/에 chromedriver 폴더를 만드시고, 자신의 크롬 버전에 맞는 실행파일을 설치하세요.")
-import os 
+import os
 from pathlib import Path
-chrom_driver_path = Path(os.path.join(chromedriver_path,"chromedriver.exe"))
-
-if chrom_driver_path.is_file() :
-    pass 
-else :
-    raise FileNotFoundError(f"해당 폴더에 chromedriver.exe는 존재하지 않습니다. : {chrom_driver_path=}")
-try:
-    driver = webdriver.Chrome(str(chrom_driver_path), options=options)
-    br_ver = driver.capabilities["browserVersion"]
-    dr_ver = driver.capabilities["chrome"]["chromedriverVersion"].split(" ")[0]
-    print("-------------------chrome current ver -------------------")
-    print(f"Browser Version: {br_ver}\nChrome Driver Version: {dr_ver}")
-except:  # selenium.common.exceptions.SessionNotCreatedException as e:
-    print("error : chrome 버전을 반드시 확인해주세요. 업데이트가 필요할 수 있습니다.")
+import chromedriver_autoinstaller
+options = webdriver.ChromeOptions()
+# options.add_argument("headless")
+options.add_argument("--window-size=1920,1000")
+options.add_argument("disable-gpu")
+path = chromedriver_autoinstaller.install()
+driver = webdriver.Chrome(path, options=options)
 
 print("사이트로 접속합니다.")
 driver.get("http://gw.agilesoda.ai/gw/uat/uia/egovLoginUsr.do")
 
+
 print("경로에 데이터가 있는지 확인해주세요.")
 acc_data = pd.read_excel(args["f"], sheet_name="Sheet1", dtype={"howmany": str, "etc": str, "amount": int})
 acc_data.fillna(" ", inplace=True)
-
 
 search_box_id = driver.find_element_by_xpath('//*[@id="userId"]')
 search_box_passwords = driver.find_element_by_xpath('//*[@id="userPw"]')
@@ -65,6 +58,7 @@ print("아래 하단 결재양식 > 톱니바퀴 > 휴가신청서와 지출결�
 
 driver.switch_to_window(driver.window_handles[0])  # main page
 
+sleep(0.1)
 finance_templete = driver.find_element_by_xpath('//*[@id="26"]/a').click()  # 톱니바퀴에서 설정해주어야합니다.(index문제)
 driver.switch_to_window(driver.window_handles[-1])
 

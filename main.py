@@ -16,6 +16,13 @@ from PyQt5.QtWidgets import (
     QTableWidget,
 )
 from qtwidgets import PasswordEdit
+from datetime import datetime
+import configparser
+from pathlib import Path
+import pandas as pd
+import json
+import shutil
+import re
 
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
@@ -27,14 +34,10 @@ from utils.utils import (
     detect_encoding,
     get_img_list,
 )
-import configparser
-from datetime import datetime
-from pathlib import Path
-import pandas as pd
+from utils.bizbox import BizBoxCommon
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from datetime import datetime
 
 
 def read_config():
@@ -60,7 +63,7 @@ class MyTabWidget(QWidget):
         self.tab1 = QWidget()
         self.tab2 = QWidget()
         self.tab3 = QWidget()
-        self.tabs.resize(300, 200)
+        self.tabs.resize(300, 400)
 
         # Add tabs
         self.tabs.addTab(self.tab1, "main")
@@ -76,12 +79,11 @@ class MyTabWidget(QWidget):
 
     def define_tab1(self):
         # Create first tab
-        self.tab1.layout = QFormLayout(self)
+        self.tab1.layout = QVBoxLayout(self)
         ################################################
         currentYear = str(datetime.now().year)
         currentMonth = str(datetime.now().month)
-        # self.buttonSave_tab = QPushButton("Save", self)
-        # self.buttonSave_tab.clicked.connect(self.handleSavemon)
+
         self.month_options = [str(i) for i in list(range(1, 13))]
         self.year_options = [str(i) for i in list(range(2022, 2027))]
         self.combo_year = QComboBox()
@@ -90,96 +92,120 @@ class MyTabWidget(QWidget):
         self.combo_month = QComboBox()
         self.combo_month.addItems(self.month_options)
         self.combo_month.setCurrentIndex(self.month_options.index(currentMonth))
+
+
+        self.tab1.layout.addWidget(QLabel("지출결의서 정리 프로그램"))
         ###########
-        label_yr = QLabel("Year ")
-        label_mn = QLabel("Month")
-        self.tab1.layout.addRow(label_yr, self.combo_year)
-        self.tab1.layout.addRow(label_mn, self.combo_month)
+        calender_layout = QHBoxLayout()
+        calender_layout.addWidget(QLabel("Year "))
+        calender_layout.addWidget(self.combo_year)
+        calender_layout.addWidget(QLabel("Month"))
+        calender_layout.addWidget(self.combo_month)
+        self.tab1.layout.addLayout(calender_layout)
+        ###########
 
-        self.options = ("Get Folder Dir", "Run")
-        # "Get File Name", "Get File Names", "Save File Name"
-
-        self.combo = QComboBox()
-        self.combo.addItems(self.options)
-
-        btn = QPushButton("Get Folder Directory")
-        btn.clicked.connect(self.getDirectory)
-        label_dir = QLabel("Directory")
-        self.tab1.layout.addRow(label_dir, btn)
-        # TODO: 꾸미기
-        # layout.addWidget(btn)
-
-        # # layout.addWidget(self.combo)
-        # self._dir_name = ""
-        # ## folder directory
-        self.textBrowser_dir = QTextBrowser()
-        self.textBrowser_dir.setStyleSheet("font-size: 15px;")
-        self.textBrowser_dir.setFixedHeight(70)
-        self.tab1.layout.addRow(QLabel("폴더위치"), self.textBrowser_dir)
-        # layout.addWidget(self.textBrowser_dir)
-
-        # ### EVENT
-        self.event_text_edit = QTextEdit()
-        self.event_text_edit.setStyleSheet("font-size: 15px;")
-        self.event_text_edit.setFixedHeight(50)
-        self.event_text_edit.setPlaceholderText(r"휴가 일자를 넣어 주세요 1,휴가/2,휴가/")
-        self.tab1.layout.addRow(QLabel("휴가   "), self.event_text_edit)
-
-        # ### API KEY LINK
-        self.textBrowser = QTextBrowser()
-        self.textBrowser.setOpenExternalLinks(True)
-        self.textBrowser.setStyleSheet("font-size: 15px;")
-        self.textBrowser.setFixedHeight(100)
-        self.textBrowser.append("API KEY를 발급 받아 아래 텍스트 박스에 넣어주세요.")
-        self.textBrowser.append("<a href=https://www.data.go.kr/data/15012690/openapi.do>한국천문연구원_특일 정보</a>")
-
-        self.tab1.layout.addRow(QLabel("참고  "), self.textBrowser)
-        # layout.addWidget(self.textBrowser)
-        self.text_edit = PasswordEdit()
-
-        self.text_edit.setStyleSheet("font-size: 15px;")
-        self.text_edit.setFixedHeight(50)
-        if "API" in self.config:
-            if "key" in self.config["API"]:
-                if len(self.config["API"]["key"]) > 1:
-                    self.text_edit.setText(self.config["API"]["key"])
-                else:
-                    self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요(info.ini 에 API KEY를 입력하면 자동으로 들어갑니다.")
-            else:
-                self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요(info.ini 에 API KEY를 입력하면 자동으로 들어갑니다.")
-        else:
-            self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요(info.ini 에 API KEY를 입력하면 자동으로 들어갑니다.")
-
-        self.tab1.layout.addRow(QLabel("API KEY  "), self.text_edit)
-        # layout.addWidget(self.text_edit)
-
-        btn = QPushButton("Run")
-        btn.clicked.connect(self.get_table)
-        self.tab1.layout.addRow(btn)
-        # layout.addWidget(btn)
-        self.textBrowser_msg = QTextBrowser()
-        self.textBrowser_msg.setStyleSheet("font-size: 15px;")
-        self.textBrowser_msg.setFixedHeight(150)
-        self.tab1.layout.addRow(self.textBrowser_msg)
-        # layout.addWidget(self.textBrowser_msg)
-        ########### chrome driver
-        btn = QPushButton("Find ChromDriver")
-        btn.clicked.connect(self.get_chrome_driver)
-        label_dir = QLabel("ChromDriver")
-        self.tab1.layout.addRow(label_dir, btn)
-        self.textBrowser_chrome_driver_msg = QTextBrowser()
-        self.textBrowser_chrome_driver_msg.setStyleSheet("font-size: 15px;")
-        self.textBrowser_chrome_driver_msg.setFixedHeight(50)
-        label_dir = QLabel("Directory")
-        self.tab1.layout.addRow(label_dir, self.textBrowser_chrome_driver_msg)
-
-        # ### USER
+        
         self.user_id = QTextEdit()
         self.user_id.setStyleSheet("font-size: 20px;")
         self.user_id.setFixedHeight(50)
         self.user_id.setPlaceholderText(r"USER의 ID를 입력하세요")
-        label = QLabel("USER  ")
-        label.setFont(QFont("Arial", 10))
+        
+        self.pw_id = PasswordEdit()
+        self.pw_id.setStyleSheet("font-size: 20px;")
+        self.pw_id.setFixedHeight(50)
+
+        login_layout = QHBoxLayout()
+        login_layout.addWidget(QLabel("ID"))
+        login_layout.addWidget(self.user_id)
+        login_layout.addWidget(QLabel("PW "))
+        login_layout.addWidget(self.pw_id)
+        self.tab1.layout.addLayout(login_layout)
+        #############
+        self.options = ("Get Folder Dir", "Run")
+
+        self.combo = QComboBox()
+        self.combo.addItems(self.options)
+
+        dir_layout = QHBoxLayout()
+        btn = QPushButton("실행")
+        btn.clicked.connect(self.getDirectory)
+        
+        
+        self.textBrowser_dir = QTextBrowser()
+        self.textBrowser_dir.setStyleSheet("font-size: 15px;")
+        self.textBrowser_dir.setFixedHeight(40)
+
+        dir_layout.addWidget(QLabel("영수증폴더"))
+        dir_layout.addWidget(self.textBrowser_dir)
+        dir_layout.addWidget(btn)
+        self.tab1.layout.addLayout(dir_layout)
+
+        self.event_text_edit = QTextEdit()
+        self.event_text_edit.setStyleSheet("font-size: 15px;")
+        self.event_text_edit.setFixedHeight(40)
+        self.event_text_edit.setPlaceholderText(r"휴가 일자를 넣어 주세요 1,휴가/2,휴가/")
+        
+        event_layout = QHBoxLayout()
+        event_layout.addWidget(QLabel('휴가일정   '))
+        event_layout.addWidget(self.event_text_edit)
+        btn = QPushButton("실행")
+        btn.clicked.connect(self.getHolidayEvent)
+        event_layout.addWidget(btn)
+        self.tab1.layout.addLayout(event_layout)
+
+        self.textBrowser = QTextBrowser()
+        self.textBrowser.setOpenExternalLinks(True)
+        self.textBrowser.setStyleSheet("font-size: 15px;")
+        self.textBrowser.setFixedHeight(50)
+        self.textBrowser.setFixedWidth(300)
+        self.textBrowser.append("API KEY를 발급 받아 왼쪽에 입력")
+        self.textBrowser.append("<a href=https://www.data.go.kr/data/15012690/openapi.do>한국천문연구원_특일 정보</a>")
+
+        # api_layout = QHBoxLayout()
+        # api_layout.addWidget(QLabel("참고  "))
+        
+        # self.tab1.layout.addLayout(api_layout)
+
+        self.text_edit = PasswordEdit()
+
+        self.text_edit.setStyleSheet("font-size: 15px;")
+        self.text_edit.setFixedHeight(50)
+        
+        api_key_layout = QHBoxLayout()
+        api_key_layout.addWidget(QLabel('API KEY    '))
+        api_key_layout.addWidget(self.text_edit)
+        api_key_layout.addWidget(self.textBrowser)
+        self.tab1.layout.addLayout(api_key_layout)
+
+
+
+        btn = QPushButton("실행")
+        btn.clicked.connect(self.get_table)
+        summary_layout = QHBoxLayout()
+        summary_layout.addWidget(QLabel('영수증분석  '))
+        summary_layout.addWidget(btn)
+        self.tab1.layout.addLayout(summary_layout)
+
+        self.textBrowser_msg = QTextBrowser()
+        self.textBrowser_msg.setStyleSheet("font-size: 15px;")
+        self.textBrowser_msg.setFixedHeight(150)
+        self.tab1.layout.addWidget(self.textBrowser_msg)
+
+
+
+        btn2 = QPushButton("실행")
+        btn2.clicked.connect(self.run_acc_selenium)
+        
+
+        submission_layout = QHBoxLayout()
+        submission_layout.addWidget(QLabel('지출결의서 제출  '))
+        submission_layout.addWidget(btn2)
+        self.tab1.layout.addLayout(submission_layout)
+
+        self.tab1.setLayout(self.tab1.layout)
+        self.update_info()
+
+    def update_info(self) :
 
         if "USER" in self.config:
             if "id" in self.config["USER"]:
@@ -191,15 +217,6 @@ class MyTabWidget(QWidget):
                 self.user_id.setPlaceholderText(r"(bizbox)USER의 ID를 입력하세요(info.ini 에 USER id를 입력하면 자동으로 들어갑니다.")
         else:
             self.user_id.setPlaceholderText(r"(bizbox)USER의 ID를 입력하세요(info.ini 에 USER id를 입력하면 자동으로 들어갑니다.")
-
-        self.tab1.layout.addRow(label, self.user_id)
-        # ### PW
-
-        self.pw_id = PasswordEdit()
-        self.pw_id.setFixedHeight(50)
-
-        label = QLabel("PASSWORD ")
-        label.setFont(QFont("Arial", 10))
         if "USER" in self.config:
             if "pw" in self.config["USER"]:
                 if len(self.config["USER"]["pw"]) > 1:
@@ -212,18 +229,35 @@ class MyTabWidget(QWidget):
                 self.pw_id.setPlaceholderText(r"(bizbox)USER의 PW를 입력하세요(info.ini 에 USER password를 입력하면 자동으로 들어갑니다.")
         else:
             self.pw_id.setPlaceholderText(r"(bizbox)USER의 PW를 입력하세요(info.ini 에 USER password를 입력하면 자동으로 들어갑니다.")
+        if "API" in self.config:
+            if "key" in self.config["API"]:
+                if len(self.config["API"]["key"]) > 1:
+                    self.text_edit.setText(self.config["API"]["key"])
+                else:
+                    self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요(info.ini 에 API KEY를 입력하면 자동으로 들어갑니다.")
+            else:
+                self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요(info.ini 에 API KEY를 입력하면 자동으로 들어갑니다.")
+        else:
+            self.text_edit.setPlaceholderText(r"API KEY를 입력해주세요(info.ini 에 API KEY를 입력하면 자동으로 들어갑니다.")
 
-        self.tab1.layout.addRow(label, self.pw_id)
-        btn2 = QPushButton("제출 실행")
-        btn2.clicked.connect(self.run_acc_selenium)
-        self.tab1.layout.addRow(btn2)
-        # font = QFont()
-        # font.setPointSize(1)
 
-        # password = PasswordEdit()
-        # password.setText("hi")
-        # self.tab1.layout.addRow(password)
-        self.tab1.setLayout(self.tab1.layout)
+    def getHolidayEvent(self) :
+        try : 
+            bizbox = BizBoxCommon(user=self.user_id.toPlainText().strip(), pw=self.pw_id.text())
+            bizbox.connect_site()
+            bizbox.login()
+            bizbox.access_main()
+            bizbox.access_sub()
+            event_holiday_text = bizbox.get_holiday_event()
+        except Exception as e :
+            return QMessageBox.warning(self, "경고", "휴가 정보를 가져오는 중에 오류가 발생했습니다. \n" + str(e), QMessageBox.Ok)
+        else :
+            self.event_text_edit.setText(event_holiday_text)
+            QMessageBox.information(self, "알림", "휴가 정보를 가져왔습니다.", QMessageBox.Ok)
+        finally :
+            return  bizbox.close()
+
+
 
     def define_tab2(self):
 
@@ -241,11 +275,21 @@ class MyTabWidget(QWidget):
         """
 
         readme = QLabel(msg)
-        readme.setFixedWidth(1000)  # +++
+        readme.setFixedWidth(500)  # +++
         readme.setMinimumHeight(30)
         font1 = readme.font()
-        font1.setPointSize(10)
+        font1.setPointSize(5)
         self.tab2.layout.addRow(readme)
+        self.add_new_tag_text_edit = QTextEdit()
+        self.add_new_tag_text_edit.setPlaceholderText('표준적요 코드를 입력하세요.(간소화,표준적요설명,표준적요코드)')
+        self.add_new_tag_text_edit.setFixedHeight(50)
+        self.add_new_tag_button = QPushButton("추가")
+        self.add_new_tag_button.clicked.connect(self.add_tag_button)
+        addtag_layout = QHBoxLayout()
+        addtag_layout.addWidget(QLabel("추가 입력"))
+        addtag_layout.addWidget(self.add_new_tag_text_edit)
+        addtag_layout.addWidget(self.add_new_tag_button)
+        self.tab2.layout.addRow(addtag_layout)
 
         font = QFont()
         font.setPointSize(10)
@@ -254,24 +298,50 @@ class MyTabWidget(QWidget):
         MAPPING_TABLE = pd.read_csv("./standardbriefscode.csv", encoding=encoding)
         self.tableWidget.setRowCount(MAPPING_TABLE.shape[0])
         self.tableWidget.setColumnCount(MAPPING_TABLE.shape[1])
+        self.new_row_idx = 0
         for idx, one_row in MAPPING_TABLE.iterrows():
             for idx2, (_, v) in enumerate(one_row.to_dict().items()):
                 v = QTableWidgetItem(str(v))
                 v.setFont(font)
                 self.tableWidget.setItem(idx, idx2, v)
+            self.new_row_idx = idx 
 
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.verticalScrollBar().setValue(0)
         self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
         # self.tableWidget.horizontalHeader().setFixedHeight(100)
         font = QFont()
-        font.setPointSize(15)
+        font.setPointSize(10)
         self.tableWidget.setHorizontalHeaderLabels(list(MAPPING_TABLE))
         # self.tableWidget.horizontalHeader().setDefaultSectionSize(15)
 
         self.tab2.layout.addRow(self.tableWidget)
         ##############
         self.tab2.setLayout(self.tab2.layout)
+
+    def add_tag_button(self) :
+        self.new_row_idx += 1
+        new_tag = self.add_new_tag_text_edit.toPlainText().strip()
+        if len(new_tag.split(",")) == 3 :
+            pass 
+        else :
+            return QMessageBox.warning("경고", "표준적요 코드를 입력하세요.(간소화,표준적요설명,표준적요코드)", QMessageBox.Ok)
+        font = QFont()
+        font.setPointSize(10)
+        self.tableWidget.insertRow(self.new_row_idx)
+        for idx2 , v in enumerate(new_tag.split(",")) :
+            v = QTableWidgetItem(str(v).strip())
+            v.setFont(font)
+            self.tableWidget.setItem(self.new_row_idx, idx2, v)
+        if QMessageBox.question(self, "알림", "표준적요 코드를 추가했습니다. 저장하시겠습니까?", QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes :
+            import csv
+            with open("./standardbriefscode.csv", 'a', newline='', encoding='utf-8') as f:
+                # 4. csv.writer 객체 생성
+                writer = csv.writer(f)
+                # 5. writerow() 메서드로 데이터 쓰기
+                writer.writerow([i.strip() for i in new_tag.split(",")])
+            QMessageBox.information(self, "알림", "저장했습니다.", QMessageBox.Ok)
+
 
     def define_tab3(self):
 
@@ -425,41 +495,33 @@ class MyTabWidget(QWidget):
             Path(result_path2).name
             self.textBrowser_msg.append(f"경비 파일 : {Path(result_path).name}")
             self.textBrowser_msg.append(f"제출 파일 : {Path(result_path2).name}")
-            self.textBrowser_msg.append(f"제출 파일은 확인 및 일부 수정이 필요합니다.")
+            # self.textBrowser_msg.append(f"제출 파일은 확인 및 일부 수정이 필요합니다.")
             folder_path = str(Path(os.path.abspath(result_path)).parent)
             self.textBrowser_msg.append(f"해당 파일이 있는 경로를 엽니다. 파일을 확인해주세요")
             os.startfile(folder_path)
-            return 200
+            return QMessageBox.information(self, "알림", "영수증 정리가 완료되었습니다. \n 제출 파일(sample_data.xlsx)은 확인 및 일부 수정이 필요합니다.", QMessageBox.Ok)
         except Exception as e:
             # self.textBrowser_msg.clear()
             print(generate_error(e))
             self.textBrowser_msg.append("Error... 테이블 생성 에러...")
             self.textBrowser_msg.append(generate_error(e))
-            return 404
+            return QMessageBox.warning(self, "오류", f"테이블 생성 에러 {generate_error(e)}", QMessageBox.Ok)
 
     def run_acc_selenium(self):
         try:
             self.check_exist_img_directory()
             result_path2 = f"{self._dir_name}/sample_data.xlsx"
-            # result_path2 = str(Path(result_path2)).replace("\\", "/").strip()
-            #  -f {result_path2}
-            import json
-            import shutil
 
             to_file_path = "./acc_contents_selenium/sample_data.xlsx"
             shutil.copyfile(result_path2, to_file_path)
-            chrom_driver_path = self.textBrowser_chrome_driver_msg.toPlainText()
-            if Path(chrom_driver_path).joinpath("chromedriver.exe").is_file() is False:
-                raise FileNotFoundError(f"해당 폴더에는 chromedriver.exe 존재하지 않습니다. {chrom_driver_path}")
             os.system(
-                f"python ./acc_contents_selenium/acc_selenium.py -id {self.user_id.toPlainText().strip()} -pw {self.pw_id.text().strip()} -f {to_file_path} -c {chrom_driver_path}"
+                f"python ./acc_contents_selenium/acc_selenium.py -id {self.user_id.toPlainText().strip()} -pw {self.pw_id.text().strip()} -f {to_file_path}"
             )
         except Exception as e:
-            print(generate_error(e))
             self.textBrowser_msg.append(generate_error(e))
-            return 404
+            return QMessageBox.warning(self, "오류", f"제출 중 에러 발생 {generate_error(e)}", QMessageBox.Ok)
         else:
-            return 200
+            return QMessageBox.information(self, "알림", "영수증 제출이 완료되었습니다. \n 제출 파일(sample_data.xlsx)은 확인 및 일부 수정이 필요합니다.", QMessageBox.Ok)
 
     def getFileName(self):
         file_filter = "Data File (*.xlsx *.csv *.dat);; Excel File (*.xlsx *.xls)"
@@ -509,7 +571,7 @@ class MyApp(QMainWindow):
         self.left = 10
         self.top = 10
         self.setWindowTitle(self.title)
-        self.window_width, self.window_height = 800, 200
+        self.window_width, self.window_height = 800, 300
         # self.setMinimumSize(self.window_width, self.window_height)
         self.setGeometry(self.left, self.top, self.window_width, self.window_height)
 
@@ -522,7 +584,7 @@ if __name__ == "__main__":
     app.setStyleSheet(
         """
         QWidget {
-            font-size: 35px;
+            font-size: 20px;
         }
     """
     )
